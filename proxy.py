@@ -21,28 +21,31 @@ class UDProxy:
 
     def forward_data(self):
         print(f"Proxy started. Listening on {self.listen_ip}:{self.listen_port}. Forwarding to {self.forward_ip}:{self.forward_port}.")
-        while True:
-            data, address = self.listen_socket.recvfrom(1024)
-            self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
-            print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
 
-            # Receive the response from the forward server
-            response, forward_address = self.forward_socket.recvfrom(1024)
+        def receive_data():
+            while True:
+                data, address = self.listen_socket.recvfrom(1024)
+                if data:
+                    self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
+                    print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
 
-            # Forward the response back to the original sender
-            self.listen_socket.sendto(response, address)
-            print(f"Forwarding response from {self.forward_ip}:{self.forward_port} to {self.listen_ip}:{self.listen_port}.")
+        def send_response():
+            while True:
+                response, forward_address = self.forward_socket.recvfrom(1024)
+                print(f"Received response from {self.forward_ip}:{self.forward_port}. Forwarding to {self.listen_ip}:{self.listen_port}.")
+                self.listen_socket.sendto(response, (self.listen_ip, self.listen_port))
+                print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
 
-    def run(self):
-        self.initialize_proxy()
+        # Start separate threads for sending and receiving
+        receive_thread = threading.Thread(target=receive_data)
+        send_thread = threading.Thread(target=send_response)
 
-        forward_thread = threading.Thread(target=self.forward_data)
-        forward_thread.start()
+        receive_thread.start()
+        send_thread.start()
 
-        try:
-            forward_thread.join()
-        except KeyboardInterrupt:
-            print("\nProxy terminated.")
+        # Wait for both threads to finish (Ctrl+C will terminate the proxy)
+        receive_thread.join()
+        send_thread.join()
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
@@ -55,4 +58,5 @@ if __name__ == '__main__':
     forward_port = int(sys.argv[4])
 
     udp_proxy = UDProxy(listen_ip, listen_port, forward_ip, forward_port)
-    udp_proxy.run()
+    udp_proxy.initialize_proxy()
+    udp_proxy.forward_data()
