@@ -20,15 +20,18 @@ class UDProxy:
         self.listen_socket.bind((self.listen_ip, self.listen_port))
 
     def forward_data(self):
+        print(f"Proxy started. Listening on {self.listen_ip}:{self.listen_port}. Forwarding to {self.forward_ip}:{self.forward_port}.")
         while True:
             data, address = self.listen_socket.recvfrom(1024)
             self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
-            
+            print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
+
             # Receive the response from the forward server
             response, forward_address = self.forward_socket.recvfrom(1024)
-            
+
             # Forward the response back to the original sender
             self.listen_socket.sendto(response, address)
+            print(f"Forwarding response from {self.forward_ip}:{self.forward_port} to {self.listen_ip}:{self.listen_port}.")
 
     def run(self):
         self.initialize_proxy()
