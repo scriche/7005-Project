@@ -22,30 +22,29 @@ class UDProxy:
     def forward_data(self):
         print(f"Proxy started. Listening on {self.listen_ip}:{self.listen_port}. Forwarding to {self.forward_ip}:{self.forward_port}.")
 
-        def receive_data():
-            while True:
+        while True:
+            try:
+                # Set a timeout for receiving data (in seconds)
                 data, address = self.listen_socket.recvfrom(1024)
                 if data:
                     self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
                     print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
 
-        def send_response():
-            while True:
-                response, forward_address = self.forward_socket.recvfrom(1024)
-                print(f"Received response from {self.forward_ip}:{self.forward_port}. Forwarding to {self.listen_ip}:{self.listen_port}.")
-                self.listen_socket.sendto(response, (self.listen_ip, self.listen_port))
-                print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
+                    # Receive the response from the forward server with a timeout
+                    self.forward_socket.settimeout(2.0)  # Adjust the timeout as needed
+                    response, forward_address = self.forward_socket.recvfrom(1024)
+                    print(f"Received response from {self.forward_ip}:{self.forward_port}. Forwarding to {self.listen_ip}:{self.listen_port}.")
 
-        # Start separate threads for sending and receiving
-        receive_thread = threading.Thread(target=receive_data)
-        send_thread = threading.Thread(target=send_response)
+                    # Forward the response back to the original sender
+                    self.listen_socket.sendto(response, address)
+                    print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
+            except socket.timeout:
+                # Handle timeout (e.g., print a message)
+                print("Timeout occurred while waiting for data.")
 
-        receive_thread.start()
-        send_thread.start()
-
-        # Wait for both threads to finish (Ctrl+C will terminate the proxy)
-        receive_thread.join()
-        send_thread.join()
+    def run(self):
+        self.initialize_proxy()
+        self.forward_data()
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
@@ -58,5 +57,4 @@ if __name__ == '__main__':
     forward_port = int(sys.argv[4])
 
     udp_proxy = UDProxy(listen_ip, listen_port, forward_ip, forward_port)
-    udp_proxy.initialize_proxy()
-    udp_proxy.forward_data()
+    udp_proxy.run()
