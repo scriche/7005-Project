@@ -33,6 +33,11 @@ class UDProxy:
             print(f"Simulating drop to {self.listen_ip}: Data not forwarded.")
             return
 
+        # Simulate delay for listener
+        if random.uniform(0, 100) < delay_chance_listen:
+            time.sleep(5)  # Simulate delay by sleeping for 5 seconds
+            print(f"Simulating delay to {self.listen_ip}: Data forwarded after delay.")
+
         # Forward data to the server
         self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
         print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
@@ -41,7 +46,7 @@ class UDProxy:
         drop_chance_forward = self.forward_settings['drop']
         delay_chance_forward = self.forward_settings['delay']
 
-        # Simulate delay
+        # Simulate delay for forwarder
         if random.uniform(0, 100) < delay_chance_forward:
             time.sleep(5)  # Simulate delay by sleeping for 5 seconds
             print(f"Simulating delay to {self.forward_ip}: Data forwarded after delay.")
