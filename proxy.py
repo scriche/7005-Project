@@ -38,31 +38,35 @@ class UDProxy:
                 # Set a timeout for receiving data (in seconds)
                 data, address = self.listen_socket.recvfrom(1024)
 
-                # Simulate drop and delay based on user input percentages
-                if random.uniform(0, 100) > self.drop_chance_to_server:
-                    # Forward data to the server
-                    self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
-                    print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
+                # Simulate drop based on user input percentages
+                if address[0] == self.forward_ip and address[1] == self.forward_port:
+                    # Drop chance to client
+                    if random.uniform(0, 100) < self.drop_chance_to_client:
+                        print(f"Simulating drop to client: Data not forwarded.")
+                        continue
 
-                    # Simulate delay
-                    if random.uniform(0, 100) > self.delay_chance_to_server:
-                        # Receive the response from the forward server with a timeout
-                        self.forward_socket.settimeout(2.0)  # Adjust the timeout as needed
-                        response, forward_address = self.forward_socket.recvfrom(1024)
-                        print(f"Received response from {self.forward_ip}:{self.forward_port}. Forwarding to {self.listen_ip}:{self.listen_port}.")
+                # Forward data to the server
+                self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
+                print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
 
-                        # Forward the response back to the original sender
-                        self.listen_socket.sendto(response, address)
-                        print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
-                    else:
-                        print(f"Simulating delay to server: Data not forwarded immediately.")
-                else:
-                    print(f"Simulating drop to server: Data not forwarded.")
+                # Simulate delay
+                if address[0] == self.forward_ip and address[1] == self.forward_port and random.uniform(0, 100) < self.delay_chance_to_client:
+                    time.sleep(5)  # Simulate delay by sleeping for 5 seconds
+                    print(f"Simulating delay to client: Data forwarded after delay.")
+
+                # Receive the response from the forward server with a timeout
+                self.forward_socket.settimeout(2.0)  # Adjust the timeout as needed
+                response, forward_address = self.forward_socket.recvfrom(1024)
+                print(f"Received response from {self.forward_ip}:{self.forward_port}. Forwarding to {self.listen_ip}:{self.listen_port}.")
+
+                # Forward the response back to the original sender
+                self.listen_socket.sendto(response, address)
+                print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
 
             except socket.timeout:
                 # Handle timeout (e.g., print a message)
                 print("Timeout occurred while waiting for data.")
-
+                
     def run(self):
         self.initialize_proxy()
         self.forward_data()
