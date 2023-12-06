@@ -17,14 +17,14 @@ class ServerFSM:
         self.address = address
         self.port = port
         self.server_socket = None
-        self.inputs = []
+        self.inputs = {}
 
     def initialize_server(self):
         self.server_socket = socket.socket(socket.AF_INET6 if ':' in self.address else socket.AF_INET, socket.SOCK_DGRAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.address, self.port))
         print(f'Server listening on {self.address}:{self.port}...')
-        self.inputs.append(self.server_socket)
+        self.inputs[self.server_socket.fileno()] = self.server_socket
         signal.signal(signal.SIGINT, self.signal_handler)
 
     def signal_handler(self, sig, frame):
@@ -37,10 +37,22 @@ class ServerFSM:
         message = data.decode()
         print(f"Received message from {client_address}: {message}")
 
+        # Extract sequence number from the message
+        parts = message.split("|")
+        sequence_number = parts[-1]
+
+        # Generate acknowledgment with the same sequence number
+        ack_message = f"{message.split('|ACK|')[0]}|ACK|{sequence_number}"
+        self.server_socket.sendto(ack_message.encode(), client_address)
+        print(f"Sent acknowledgment to {client_address}: {ack_message}")
+
     def run(self):
         while True:
-            data, client_address = self.server_socket.recvfrom(1024)
-            self.handle_received_message(data, client_address)
+            readable, _, _ = select.select(list(self.inputs.values()), [], [])
+            for s in readable:
+                if s is self.server_socket:
+                    data, client_address = s.recvfrom(1024)
+                    self.handle_received_message(data, client_address)
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
