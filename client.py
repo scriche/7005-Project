@@ -19,11 +19,16 @@ class Client:
         self.client_socket.sendto(message.encode(), (self.server_address, self.server_port))
 
     def run(self):
-        while True:
-            message = input("Enter a message (or 'exit' to quit): ")
-            if message.lower() == 'exit':
-                break
-            self.send_message(message)
+        try:
+            while True:
+                message = input("Enter a message (or 'exit' to quit): ")
+                if message.lower() == 'exit':
+                    break
+                self.send_message(message)
+        except KeyboardInterrupt:
+            print("\nCtrl+C received. Exiting gracefully.")
+        finally:
+            self.client_socket.close()
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
