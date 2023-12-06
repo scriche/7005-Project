@@ -17,41 +17,44 @@ class UDProxy:
         self.listen_socket.bind((self.listen_ip, self.listen_port))
         self.forward_socket.settimeout(2.0)
 
-        self.ip_settings = {}  # Dictionary to store drop and delay percentages per IP
+        self.listen_settings = {'drop': float(input(f"Enter the drop percentage to listener {self.listen_ip} (0 to 100): ")),
+                               'delay': float(input(f"Enter the delay percentage to listener {self.listen_ip} (0 to 100): "))}
 
-        while True:
-            ip = input("Enter IP (or 'done' to finish): ")
-            if ip.lower() == 'done':
-                break
-
-            drop_chance = float(input(f"Enter the drop percentage to {ip} (0 to 100): "))
-            delay_chance = float(input(f"Enter the delay percentage to {ip} (0 to 100): "))
-            self.ip_settings[ip] = {'drop': drop_chance, 'delay': delay_chance}
+        self.forward_settings = {'drop': float(input(f"Enter the drop percentage to forwarder {self.forward_ip} (0 to 100): ")),
+                                'delay': float(input(f"Enter the delay percentage to forwarder {self.forward_ip} (0 to 100): "))}
 
     def forward_data(self, data, source_address):
-        # Get drop and delay percentages for the source IP
-        source_ip = source_address[0]
-        drop_chance = self.ip_settings.get(source_ip, {'drop': 0})['drop']
-        delay_chance = self.ip_settings.get(source_ip, {'delay': 0})['delay']
+        # Get drop and delay percentages for the listener IP
+        drop_chance_listen = self.listen_settings['drop']
+        delay_chance_listen = self.listen_settings['delay']
 
         # Simulate drop based on user input percentages
-        if random.uniform(0, 100) < drop_chance:
-            print(f"Simulating drop to {source_ip}: Data not forwarded.")
+        if random.uniform(0, 100) < drop_chance_listen:
+            print(f"Simulating drop to {self.listen_ip}: Data not forwarded.")
             return
 
         # Forward data to the server
         self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
         print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
 
+        # Get drop and delay percentages for the forward IP
+        drop_chance_forward = self.forward_settings['drop']
+        delay_chance_forward = self.forward_settings['delay']
+
         # Simulate delay
-        if random.uniform(0, 100) < delay_chance:
+        if random.uniform(0, 100) < delay_chance_forward:
             time.sleep(5)  # Simulate delay by sleeping for 5 seconds
-            print(f"Simulating delay to {source_ip}: Data forwarded after delay.")
+            print(f"Simulating delay to {self.forward_ip}: Data forwarded after delay.")
 
         # Receive the response from the forward server
         try:
             response, _ = self.forward_socket.recvfrom(1024)
             print(f"Received response from {self.forward_ip}:{self.forward_port}. Forwarding to {self.listen_ip}:{self.listen_port}.")
+
+            # Simulate drop based on user input percentages
+            if random.uniform(0, 100) < drop_chance_forward:
+                print(f"Simulating drop to {self.listen_ip}: Response not forwarded.")
+                return
 
             # Forward the response back to the original sender
             self.listen_socket.sendto(response, source_address)
