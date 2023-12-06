@@ -5,6 +5,7 @@
 
 import sys
 import socket
+import time
 
 class Client:
     def __init__(self, server_address, server_port):
@@ -12,6 +13,7 @@ class Client:
         self.server_port = server_port
         self.client_socket = None
         self.sequence_number = 0
+        self.MAX_RETRIES = 5
 
     def initialize_client(self):
         self.client_socket = socket.socket(socket.AF_INET6 if ':' in self.server_address else socket.AF_INET, socket.SOCK_DGRAM)
@@ -20,12 +22,25 @@ class Client:
         self.sequence_number += 1
         formatted_message = f"{message}|ACK|{self.sequence_number}"
 
-        self.client_socket.sendto(formatted_message.encode(), (self.server_address, self.server_port))
-        print(f"Sent message to {self.server_address}:{self.server_port}: {message} (Seq: {self.sequence_number})")
+        retries = 0
+        while retries < self.MAX_RETRIES:
+            self.client_socket.sendto(formatted_message.encode(), (self.server_address, self.server_port))
+            print(f"Sent message to {self.server_address}:{self.server_port}: {message} (Seq: {self.sequence_number})")
 
-        # Receive acknowledgment from the server
-        ack_message, _ = self.client_socket.recvfrom(1024)
-        print(f"Received acknowledgment from {self.server_address}:{self.server_port}: {ack_message.decode()}")
+            # Set a timeout for receiving acknowledgment
+            self.client_socket.settimeout(2)
+
+            try:
+                # Receive acknowledgment from the server
+                ack_message, _ = self.client_socket.recvfrom(1024)
+                print(f"Received acknowledgment from {self.server_address}:{self.server_port}: {ack_message.decode()}")
+                break  # Exit the loop if acknowledgment is received
+            except socket.timeout:
+                print(f"Timed out. Retrying ({retries + 1}/{self.MAX_RETRIES})...")
+                retries += 1
+
+        if retries == self.MAX_RETRIES:
+            print("Max retries reached. Giving up.")
 
     def run(self):
         try:
