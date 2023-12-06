@@ -17,24 +17,36 @@ class UDProxy:
         self.listen_socket.bind((self.listen_ip, self.listen_port))
         self.forward_socket.settimeout(2.0)
 
-        self.drop_chance_to_client = float(input("Enter the drop percentage to client (0 to 100): "))
-        self.delay_chance_to_client = float(input("Enter the delay percentage to client (0 to 100): "))
+        self.ip_settings = {}  # Dictionary to store drop and delay percentages per IP
+
+        while True:
+            ip = input("Enter IP (or 'done' to finish): ")
+            if ip.lower() == 'done':
+                break
+
+            drop_chance = float(input(f"Enter the drop percentage to {ip} (0 to 100): "))
+            delay_chance = float(input(f"Enter the delay percentage to {ip} (0 to 100): "))
+            self.ip_settings[ip] = {'drop': drop_chance, 'delay': delay_chance}
 
     def forward_data(self, data, source_address):
+        # Get drop and delay percentages for the source IP
+        source_ip = source_address[0]
+        drop_chance = self.ip_settings.get(source_ip, {'drop': 0})['drop']
+        delay_chance = self.ip_settings.get(source_ip, {'delay': 0})['delay']
+
         # Simulate drop based on user input percentages
-        if source_address[0] == self.forward_ip and source_address[1] == self.forward_port:
-            if random.uniform(0, 100) < self.drop_chance_to_client:
-                print(f"Simulating drop to client: Data not forwarded.")
-                return
+        if random.uniform(0, 100) < drop_chance:
+            print(f"Simulating drop to {source_ip}: Data not forwarded.")
+            return
 
         # Forward data to the server
         self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
         print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
 
         # Simulate delay
-        if source_address[0] == self.forward_ip and source_address[1] == self.forward_port and random.uniform(0, 100) < self.delay_chance_to_client:
+        if random.uniform(0, 100) < delay_chance:
             time.sleep(5)  # Simulate delay by sleeping for 5 seconds
-            print(f"Simulating delay to client: Data forwarded after delay.")
+            print(f"Simulating delay to {source_ip}: Data forwarded after delay.")
 
         # Receive the response from the forward server
         try:
@@ -68,4 +80,3 @@ if __name__ == '__main__':
 
     udp_proxy = UDProxy(listen_ip, listen_port, forward_ip, forward_port)
     udp_proxy.run()
-
