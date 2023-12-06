@@ -1,54 +1,55 @@
-# Description: Simple UDP Proxy
-#
-# Goal: To create a simple UDP proxy that forwards packets
-# between a server and a client.
-
 import sys
 import socket
 import threading
 
-class Proxy:
-    def __init__(self, server_address, server_port, client_address, client_port):
-        self.server_address = server_address
-        self.server_port = server_port
-        self.client_address = client_address
-        self.client_port = client_port
+class UDProxy:
+    def __init__(self, listen_ip, listen_port, forward_ip, forward_port):
+        self.listen_ip = listen_ip
+        self.listen_port = listen_port
+        self.forward_ip = forward_ip
+        self.forward_port = forward_port
 
-        self.server_socket = None
-        self.client_socket = None
+        self.listen_socket = None
+        self.forward_socket = None
 
     def initialize_proxy(self):
-        self.server_socket = socket.socket(socket.AF_INET6 if ':' in self.server_address else socket.AF_INET, socket.SOCK_DGRAM)
-        self.client_socket = socket.socket(socket.AF_INET6 if ':' in self.client_address else socket.AF_INET, socket.SOCK_DGRAM)
+        self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.forward_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        self.server_socket.bind((self.server_address, self.server_port))
-        self.client_socket.bind((self.client_address, self.client_port))
+        # Bind the listen socket to the specified IP and port
+        self.listen_socket.bind((self.listen_ip, self.listen_port))
 
-    def forward_data(self, source_socket, destination_socket):
+    def forward_data(self):
         while True:
-            data, address = source_socket.recvfrom(1024)
-            destination_socket.sendto(data, (self.client_address, self.client_port))
+            data, address = self.listen_socket.recvfrom(1024)
+            self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
+            
+            # Receive the response from the forward server
+            response, forward_address = self.forward_socket.recvfrom(1024)
+            
+            # Forward the response back to the original sender
+            self.listen_socket.sendto(response, address)
 
     def run(self):
-        server_to_client_thread = threading.Thread(target=self.forward_data, args=(self.server_socket, self.client_socket))
-        client_to_server_thread = threading.Thread(target=self.forward_data, args=(self.client_socket, self.server_socket))
+        self.initialize_proxy()
 
-        server_to_client_thread.start()
-        client_to_server_thread.start()
+        forward_thread = threading.Thread(target=self.forward_data)
+        forward_thread.start()
 
-        server_to_client_thread.join()
-        client_to_server_thread.join()
+        try:
+            forward_thread.join()
+        except KeyboardInterrupt:
+            print("\nProxy terminated.")
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
-        print("Usage: python proxy.py <server IP address> <server port> <client IP address> <client port>")
+        print("Usage: python udp_proxy.py <listen IP> <listen port> <forward IP> <forward port>")
         sys.exit(1)
 
-    server_address = sys.argv[1]
-    server_port = int(sys.argv[2])
-    client_address = sys.argv[3]
-    client_port = int(sys.argv[4])
+    listen_ip = sys.argv[1]
+    listen_port = int(sys.argv[2])
+    forward_ip = sys.argv[3]
+    forward_port = int(sys.argv[4])
 
-    proxy = Proxy(server_address, server_port, client_address, client_port)
-    proxy.initialize_proxy()
-    proxy.run()
+    udp_proxy = UDProxy(listen_ip, listen_port, forward_ip, forward_port)
+    udp_proxy.run()
