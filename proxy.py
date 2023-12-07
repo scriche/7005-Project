@@ -38,7 +38,7 @@ class UDProxy:
         # Simulate delay for listener
         if apply_delay and random.uniform(0, 100) < delay_chance_listen:
             print(f"Simulating delay to {self.listen_ip}: Data forwarded after delay.")
-            threading.Timer(5, self.forward_response, args=(data, source_address)).start()
+            time.sleep(5)  # Simulate delay by sleeping for 5 seconds
         else:
             self.forward_response(data, source_address)
 
@@ -63,24 +63,15 @@ class UDProxy:
             # Simulate delay for forwarder
             if random.uniform(0, 100) < delay_chance_forward:
                 print(f"Simulating delay to {self.forward_ip}: Response forwarded after delay.")
-                threading.Timer(5, self.forward_listener, args=(response, source_address)).start()
-            else:
-                self.forward_listener(response, source_address)
+                time.sleep(5)  # Simulate delay by sleeping for 5 seconds
+
+            # Forward the response back to the original sender
+            self.listen_socket.sendto(response, source_address)
+            print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
 
         except socket.timeout:
             # Handle timeout (e.g., print a message)
             print("Timeout occurred while waiting for data.")
-
-    def forward_listener(self, response, source_address):
-        # Set the event to allow the listener to proceed
-        self.event.set()
-
-        # Forward the response back to the original sender
-        self.listen_socket.sendto(response, source_address)
-        print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
-
-        # Clear the event for the next iteration
-        self.event.clear()
 
     def run(self):
         print(f"Proxy started. Listening on {self.listen_ip}:{self.listen_port}. Forwarding to {self.forward_ip}:{self.forward_port}.")
