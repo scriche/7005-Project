@@ -14,6 +14,7 @@ class Client:
         self.client_socket = None
         self.sequence_number = 0
         self.MAX_RETRIES = 5
+        self.last_acknowledged_sequence = -1
 
     def initialize_client(self):
         self.client_socket = socket.socket(socket.AF_INET6 if ':' in self.server_address else socket.AF_INET, socket.SOCK_DGRAM)
@@ -36,11 +37,13 @@ class Client:
 
                 # Check if the acknowledgment has the correct sequence number
                 ack_sequence_number = int(ack_message.decode().split('|')[-1])
-                if ack_sequence_number == self.sequence_number:
+
+                if ack_sequence_number > self.last_acknowledged_sequence:
+                    self.last_acknowledged_sequence = ack_sequence_number
                     print(f"Received acknowledgment from {self.server_address}:{self.server_port}: {ack_message.decode()}")
                     break  # Exit the loop if acknowledgment is received
-                else:
-                    print(f"Ignored acknowledgment with incorrect sequence number: {ack_sequence_number}")
+
+                print(f"Ignored acknowledgment with incorrect or outdated sequence number: {ack_sequence_number}")
 
             except socket.timeout:
                 print(f"Timed out. Retrying ({retries + 1}/{self.MAX_RETRIES})...")
