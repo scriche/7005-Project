@@ -23,9 +23,9 @@ class Client:
         self.sequence_number += 1
         formatted_message = f"{message}|ACK|{self.sequence_number}"
 
-        retries = 0
-        while retries < self.MAX_RETRIES:
-            if self.sequence_number > self.last_acknowledged_sequence:
+        if self.sequence_number > self.last_acknowledged_sequence:
+            retries = 0
+            while retries < self.MAX_RETRIES:
                 self.client_socket.sendto(formatted_message.encode(), (self.server_address, self.server_port))
                 print(f"Sent message to {self.server_address}:{self.server_port}: {message} (Seq: {self.sequence_number})")
 
@@ -49,12 +49,8 @@ class Client:
                 except socket.timeout:
                     print(f"Timed out. Retrying ({retries + 1}/{self.MAX_RETRIES})...")
                     retries += 1
-            else:
-                print(f"Ignoring retry for message with sequence number {self.sequence_number} (already acknowledged).")
-                break
-
-        if retries == self.MAX_RETRIES:
-            print("Max retries reached. Giving up.")
+        else:
+            print(f"Ignoring message with sequence number {self.sequence_number} (already acknowledged).")
 
     def run(self):
         try:
@@ -79,4 +75,3 @@ if __name__ == '__main__':
     client = Client(server_address, server_port)
     client.initialize_client()
     client.run()
-
