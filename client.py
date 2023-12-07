@@ -1,3 +1,8 @@
+# Description: Reliable UDP socket client
+#
+# Goal: To create a reliable UDP socket client that can send messages
+# to the UDP server created in the server script.
+
 import sys
 import socket
 import time
@@ -71,4 +76,7 @@ if __name__ == '__main__':
     server_address = sys.argv[1]
     server_port = int(sys.argv[2])
 
-    client = Client(server_address, server_port
+    client = Client(server_address, server_port)
+    client.initialize_client()
+    client.run()
+
