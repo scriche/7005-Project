@@ -29,6 +29,7 @@ class Client:
             if not message_sent:
                 self.client_socket.sendto(formatted_message.encode(), (self.server_address, self.server_port))
                 print(f"Sent message to {self.server_address}:{self.server_port}: {message} (Seq: {self.sequence_number})")
+                message_sent = True
 
             # Set a timeout for receiving acknowledgment
             self.client_socket.settimeout(2)
