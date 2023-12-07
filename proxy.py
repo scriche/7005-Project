@@ -2,6 +2,7 @@ import sys
 import socket
 import threading
 import random
+from threading import Timer
 import time
 
 class UDProxy:
@@ -23,7 +24,7 @@ class UDProxy:
         self.forward_settings = {'drop': float(input(f"Enter the drop percentage to forwarder {self.forward_ip} (0 to 100): ")),
                                 'delay': float(input(f"Enter the delay percentage to forwarder {self.forward_ip} (0 to 100): "))}
 
-    def forward_data(self, data, source_address):
+    def forward_data(self, data, source_address, apply_delay):
         # Get drop and delay percentages for the listener IP
         drop_chance_listen = self.listen_settings['drop']
         delay_chance_listen = self.listen_settings['delay']
@@ -34,7 +35,7 @@ class UDProxy:
             return
 
         # Simulate delay for listener
-        if random.uniform(0, 100) < delay_chance_listen:
+        if apply_delay and random.uniform(0, 100) < delay_chance_listen:
             time.sleep(5)  # Simulate delay by sleeping for 5 seconds
             print(f"Simulating delay to {self.listen_ip}: Data forwarded after delay.")
 
@@ -73,7 +74,8 @@ class UDProxy:
 
         while True:
             data, source_address = self.listen_socket.recvfrom(1024)
-            threading.Thread(target=self.forward_data, args=(data, source_address)).start()
+            apply_delay = random.uniform(0, 100) < self.listen_settings['delay']
+            threading.Thread(target=self.forward_data, args=(data, source_address, apply_delay)).start()
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
