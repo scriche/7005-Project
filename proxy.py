@@ -39,10 +39,7 @@ class UDProxy:
         if apply_delay and random.uniform(0, 100) < delay_chance_listen:
             print(f"Simulating delay to {self.listen_ip}: Data forwarded after delay.")
             time.sleep(5)  # Simulate delay by sleeping for 5 seconds
-        else:
-            self.forward_response(data, source_address)
 
-    def forward_response(self, data, source_address):
         # Forward data to the server
         self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
         print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
@@ -80,8 +77,6 @@ class UDProxy:
             data, source_address = self.listen_socket.recvfrom(1024)
             apply_delay = random.uniform(0, 100) < self.listen_settings['delay']
             self.forward_data(data, source_address, apply_delay)
-            # Wait for the listener to complete before processing the next message
-            self.event.wait()
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
