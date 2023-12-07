@@ -23,7 +23,14 @@ class UDProxy:
         self.forward_settings = {'drop': float(input(f"Enter the drop percentage to forwarder {self.forward_ip} (0 to 100): ")),
                                 'delay': float(input(f"Enter the delay percentage to forwarder {self.forward_ip} (0 to 100): "))}
 
-    def forward_data(self, data, source_address, apply_delay):
+    def apply_delay(self, chance):
+        if random.uniform(0, 100) < chance:
+            delay = random.uniform(0.1, 2.0)  # Adjust the range based on your preference
+            time.sleep(delay)
+            return True
+        return False
+
+    def forward_data(self, data, source_address):
         # Get drop and delay percentages for the listener IP
         drop_chance_listen = self.listen_settings['drop']
         delay_chance_listen = self.listen_settings['delay']
@@ -34,10 +41,10 @@ class UDProxy:
             return
 
         # Simulate delay for listener
-        if apply_delay and random.uniform(0, 100) < delay_chance_listen:
+        if self.apply_delay(delay_chance_listen):
             print(f"Simulating delay to {self.listen_ip}: Data forwarded after delay.")
-        else:
-            threading.Thread(target=self.forward_response, args=(data, source_address)).start()
+        
+        threading.Thread(target=self.forward_response, args=(data, source_address)).start()
 
     def forward_response(self, data, source_address):
         # Forward data to the server
@@ -58,10 +65,10 @@ class UDProxy:
                 return
 
             # Simulate delay for forwarder
-            if random.uniform(0, 100) < delay_chance_forward:
+            if self.apply_delay(delay_chance_forward):
                 print(f"Simulating delay to {self.forward_ip}: Response forwarded after delay.")
-            else:
-                threading.Thread(target=self.forward_listener, args=(response, source_address)).start()
+            
+            threading.Thread(target=self.forward_listener, args=(response, source_address)).start()
 
         except socket.timeout:
             # Handle timeout (e.g., print a message)
@@ -77,8 +84,7 @@ class UDProxy:
 
         while True:
             data, source_address = self.listen_socket.recvfrom(1024)
-            apply_delay = random.uniform(0, 100) < self.listen_settings['delay']
-            threading.Thread(target=self.forward_data, args=(data, source_address, apply_delay)).start()
+            threading.Thread(target=self.forward_data, args=(data, source_address)).start()
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
