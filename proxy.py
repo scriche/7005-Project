@@ -36,7 +36,7 @@ class UDProxy:
         # Simulate delay for listener
         if apply_delay and random.uniform(0, 100) < delay_chance_listen:
             print(f"Simulating delay to {self.listen_ip}: Data forwarded after delay.")
-            threading.Thread(target=self.forward_response, args=(data, source_address)).start()
+            time.sleep(5)  # Simulate delay by sleeping for 5 seconds
         else:
             self.forward_response(data, source_address)
 
@@ -61,7 +61,7 @@ class UDProxy:
             # Simulate delay for forwarder
             if random.uniform(0, 100) < delay_chance_forward:
                 print(f"Simulating delay to {self.forward_ip}: Response forwarded after delay.")
-                threading.Thread(target=self.forward_listener, args=(response, source_address)).start()
+                time.sleep(5)  # Simulate delay by sleeping for 5 seconds
             else:
                 self.forward_listener(response, source_address)
 
