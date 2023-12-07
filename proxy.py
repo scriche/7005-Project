@@ -23,6 +23,8 @@ class UDProxy:
         self.forward_settings = {'drop': float(input(f"Enter the drop percentage to forwarder {self.forward_ip} (0 to 100): ")),
                                 'delay': float(input(f"Enter the delay percentage to forwarder {self.forward_ip} (0 to 100): "))}
 
+        self.event = threading.Event()
+
     def forward_data(self, data, source_address, apply_delay):
         # Get drop and delay percentages for the listener IP
         drop_chance_listen = self.listen_settings['drop']
@@ -70,9 +72,15 @@ class UDProxy:
             print("Timeout occurred while waiting for data.")
 
     def forward_listener(self, response, source_address):
+        # Set the event to allow the listener to proceed
+        self.event.set()
+
         # Forward the response back to the original sender
         self.listen_socket.sendto(response, source_address)
         print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
+
+        # Clear the event for the next iteration
+        self.event.clear()
 
     def run(self):
         print(f"Proxy started. Listening on {self.listen_ip}:{self.listen_port}. Forwarding to {self.forward_ip}:{self.forward_port}.")
@@ -81,6 +89,9 @@ class UDProxy:
             data, source_address = self.listen_socket.recvfrom(1024)
             apply_delay = random.uniform(0, 100) < self.listen_settings['delay']
             self.forward_data(data, source_address, apply_delay)
+
+            # Wait for the listener to complete before processing the next message
+            self.event.wait()
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
