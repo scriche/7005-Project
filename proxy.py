@@ -23,8 +23,6 @@ class UDProxy:
         self.forward_settings = {'drop': float(input(f"Enter the drop percentage to forwarder {self.forward_ip} (0 to 100): ")),
                                 'delay': float(input(f"Enter the delay percentage to forwarder {self.forward_ip} (0 to 100): "))}
 
-        self.event = threading.Event()
-
     def forward_data(self, data, source_address, apply_delay):
         # Get drop and delay percentages for the listener IP
         drop_chance_listen = self.listen_settings['drop']
@@ -38,8 +36,11 @@ class UDProxy:
         # Simulate delay for listener
         if apply_delay and random.uniform(0, 100) < delay_chance_listen:
             print(f"Simulating delay to {self.listen_ip}: Data forwarded after delay.")
-            time.sleep(5)  # Simulate delay by sleeping for 5 seconds
+            threading.Thread(target=self.forward_response, args=(data, source_address)).start()
+        else:
+            self.forward_response(data, source_address)
 
+    def forward_response(self, data, source_address):
         # Forward data to the server
         self.forward_socket.sendto(data, (self.forward_ip, self.forward_port))
         print(f"Forwarding data from {self.listen_ip}:{self.listen_port} to {self.forward_ip}:{self.forward_port}.")
@@ -60,15 +61,18 @@ class UDProxy:
             # Simulate delay for forwarder
             if random.uniform(0, 100) < delay_chance_forward:
                 print(f"Simulating delay to {self.forward_ip}: Response forwarded after delay.")
-                time.sleep(5)  # Simulate delay by sleeping for 5 seconds
-
-            # Forward the response back to the original sender
-            self.listen_socket.sendto(response, source_address)
-            print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
+                threading.Thread(target=self.forward_listener, args=(response, source_address)).start()
+            else:
+                self.forward_listener(response, source_address)
 
         except socket.timeout:
             # Handle timeout (e.g., print a message)
             print("Timeout occurred while waiting for data.")
+
+    def forward_listener(self, response, source_address):
+        # Forward the response back to the original sender
+        self.listen_socket.sendto(response, source_address)
+        print(f"Forwarded response to {self.listen_ip}:{self.listen_port}.")
 
     def run(self):
         print(f"Proxy started. Listening on {self.listen_ip}:{self.listen_port}. Forwarding to {self.forward_ip}:{self.forward_port}.")
