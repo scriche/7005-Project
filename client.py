@@ -33,8 +33,15 @@ class Client:
             try:
                 # Receive acknowledgment from the server
                 ack_message, _ = self.client_socket.recvfrom(1024)
-                print(f"Received acknowledgment from {self.server_address}:{self.server_port}: {ack_message.decode()}")
-                break  # Exit the loop if acknowledgment is received
+
+                # Check if the acknowledgment has the correct sequence number
+                ack_sequence_number = int(ack_message.decode().split('|')[-1])
+                if ack_sequence_number == self.sequence_number:
+                    print(f"Received acknowledgment from {self.server_address}:{self.server_port}: {ack_message.decode()}")
+                    break  # Exit the loop if acknowledgment is received
+                else:
+                    print(f"Ignored acknowledgment with incorrect sequence number: {ack_sequence_number}")
+
             except socket.timeout:
                 print(f"Timed out. Retrying ({retries + 1}/{self.MAX_RETRIES})...")
                 retries += 1

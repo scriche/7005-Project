@@ -89,7 +89,6 @@ class UDProxy:
             data, source_address = self.listen_socket.recvfrom(1024)
             apply_delay = random.uniform(0, 100) < self.listen_settings['delay']
             self.forward_data(data, source_address, apply_delay)
-
             # Wait for the listener to complete before processing the next message
             self.event.wait()
 
