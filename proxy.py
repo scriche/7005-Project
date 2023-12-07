@@ -25,7 +25,7 @@ class UDProxy:
 
     def apply_delay(self, chance):
         if random.uniform(0, 100) < chance:
-            delay = random.uniform(0.1, 2.0)  # Adjust the range based on your preference
+            delay = 4  # Adjust the range based on your preference
             time.sleep(delay)
             return True
         return False
