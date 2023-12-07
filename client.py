@@ -1,8 +1,3 @@
-# Description: Reliable UDP socket client
-#
-# Goal: To create a reliable UDP socket client that can send messages
-# to the UDP server created in the server script.
-
 import sys
 import socket
 import time
@@ -25,29 +20,33 @@ class Client:
 
         retries = 0
         while retries < self.MAX_RETRIES:
-            self.client_socket.sendto(formatted_message.encode(), (self.server_address, self.server_port))
-            print(f"Sent message to {self.server_address}:{self.server_port}: {message} (Seq: {self.sequence_number})")
+            if self.sequence_number > self.last_acknowledged_sequence:
+                self.client_socket.sendto(formatted_message.encode(), (self.server_address, self.server_port))
+                print(f"Sent message to {self.server_address}:{self.server_port}: {message} (Seq: {self.sequence_number})")
 
-            # Set a timeout for receiving acknowledgment
-            self.client_socket.settimeout(2)
+                # Set a timeout for receiving acknowledgment
+                self.client_socket.settimeout(2)
 
-            try:
-                # Receive acknowledgment from the server
-                ack_message, _ = self.client_socket.recvfrom(1024)
+                try:
+                    # Receive acknowledgment from the server
+                    ack_message, _ = self.client_socket.recvfrom(1024)
 
-                # Check if the acknowledgment has the correct sequence number
-                ack_sequence_number = int(ack_message.decode().split('|')[-1])
+                    # Check if the acknowledgment has the correct sequence number
+                    ack_sequence_number = int(ack_message.decode().split('|')[-1])
 
-                if ack_sequence_number > self.last_acknowledged_sequence:
-                    self.last_acknowledged_sequence = ack_sequence_number
-                    print(f"Received acknowledgment from {self.server_address}:{self.server_port}: {ack_message.decode()}")
-                    break  # Exit the loop if acknowledgment is received
+                    if ack_sequence_number > self.last_acknowledged_sequence:
+                        self.last_acknowledged_sequence = ack_sequence_number
+                        print(f"Received acknowledgment from {self.server_address}:{self.server_port}: {ack_message.decode()}")
+                        break  # Exit the loop if acknowledgment is received
 
-                print(f"Ignored acknowledgment with incorrect or outdated sequence number: {ack_sequence_number}")
+                    print(f"Ignored acknowledgment with incorrect or outdated sequence number: {ack_sequence_number}")
 
-            except socket.timeout:
-                print(f"Timed out. Retrying ({retries + 1}/{self.MAX_RETRIES})...")
-                retries += 1
+                except socket.timeout:
+                    print(f"Timed out. Retrying ({retries + 1}/{self.MAX_RETRIES})...")
+                    retries += 1
+            else:
+                print(f"Ignoring retry for message with sequence number {self.sequence_number} (already acknowledged).")
+                break
 
         if retries == self.MAX_RETRIES:
             print("Max retries reached. Giving up.")
@@ -72,6 +71,4 @@ if __name__ == '__main__':
     server_address = sys.argv[1]
     server_port = int(sys.argv[2])
 
-    client = Client(server_address, server_port)
-    client.initialize_client()
-    client.run()
+    client = Client(server_address, server_port
