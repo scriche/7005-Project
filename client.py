@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     # Checks if the user has entered a valid port and address
     try:
-        if server_port < 0 or port > 65535:
+        if server_port < 0 or server_port > 65535:
             raise ValueError
     except ValueError:
         print("Invalid port number. Port must be between 0 and 65535.")
